@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import GoogleSignInButton from './GoogleSignInButton' // এখানে ইমপোর্ট করুন
+import GoogleSignInButton from './GoogleSignInButton'
 
 export default function SignInForm() {
   const { signIn, errors, fetchStatus } = useSignIn()
@@ -219,7 +219,7 @@ export default function SignInForm() {
           </div>
         )}
 
-        {/* আলাদা করা গুগল বাটন কম্পোনেন্টটি এখানে কল করা হয়েছে */}
+        {/* Google বাটন */}
         <GoogleSignInButton fetchStatus={fetchStatus} />
 
         {/* Divider */}
@@ -262,6 +262,7 @@ export default function SignInForm() {
             />
           </div>
 
+          {/* লিঙ্কটি এখানে অলরেডি লিঙ্কড আছে */}
           <div className="flex justify-end">
             <Link
               href="/forgot-password"
