@@ -19,7 +19,7 @@ const isAuthRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/forgot-password(.*)",
-  "sso-callback(.*)",
+  "/sso-callback(.*)",
   
 ])
 
