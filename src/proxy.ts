@@ -1,27 +1,25 @@
 // middleware.ts
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
+import { clerkMiddleware } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 
-// পাবলিক রুট - সবাই দেখতে পারে
-const isPublicRoute = createRouteMatcher([
+// ১. পাবলিক রুটগুলোর লিস্ট
+const PUBLIC_ROUTES = [
   "/",
   "/about",
   "/pricing", 
   "/contact",
   "/privacy",
-  "/terms",
-  "/api/webhooks(.*)",
-  "/sso-callback(.*)",
-])
+  "/services",
 
-// অথ রুট - শুধু লগআউট ইউজার
-const isAuthRoute = createRouteMatcher([
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/forgot-password(.*)",
-  "/sso-callback(.*)",
-  
-])
+]
+
+// ২. অথ রুট - শুধু লগআউট করা ইউজারদের জন্য
+const AUTH_ROUTES = [
+  "/sign-in",
+  "/sign-up",
+  "/forgot-password",
+  "/sso-callback",
+]
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
@@ -29,34 +27,43 @@ export default clerkMiddleware(async (auth, req) => {
 
   console.log('📍 Path:', path, '| UserId:', userId)
 
-  // ✅ লগইন থাকলে
+  // রুট টাইপ চেক (startsWith দিয়ে করায় /sign-in/anything ও হ্যান্ডেল হবে)
+  const isPublicRoute = PUBLIC_ROUTES.includes(path) || path.startsWith("/api/webhooks") || path.startsWith("/sso-callback")
+  const isAuthRoute = AUTH_ROUTES.some(route => path.startsWith(route))
+
+  // ✅ ইউজার লগইন করা থাকলে
   if (userId) {
-    // অথ পেজে গেলে ড্যাশবোর্ডে পাঠান
-    if (isAuthRoute(req)) {
+    if (isAuthRoute) {
       const dashboardUrl = new URL("/dashboard", req.url)
       return NextResponse.redirect(dashboardUrl)
     }
-    // বাকি সব রুটে যেতে দিই
-    return NextResponse.next()
+    
+    // ড্যাশবোর্ড বা প্রোটেক্টেড রুটে রিলোড মারলে যেন ক্যাশ প্রবলেম না হয়, তার জন্য হেডার সেট
+    const response = NextResponse.next()
+    response.headers.set('x-middleware-cache', 'no-cache')
+    return response
   }
 
-  // ❌ লগইন না থাকলে
+  // ❌ ইউজার লগইন করা না থাকলে
   if (!userId) {
-    // পাবলিক রুটে যেতে দিই
-    if (isPublicRoute(req)) {
+    // যদি পাবলিক রুট অথবা সাইন-ইন পেজ হয়, তবেই যেতে দিন
+    if (isPublicRoute || isAuthRoute) {
       return NextResponse.next()
     }
     
-    // // প্রোটেক্টেড রুটে গেলে সাইনইনে পাঠান
-    // // URL এ কোনো প্যারামিটার যোগ করবেন না
-    // const signInUrl = new URL("/sign-in", req.url)
-    // return NextResponse.redirect(signInUrl)
+    // বাকি সব প্রোটেক্টেড রুটের জন্য সাইন-ইন পেজে রিডাইরেক্ট করুন
+    // সাথে একটা ক্যাশ-কন্ট্রোল হেডার দেওয়া হয়েছে যাতে নেক্সট-জেএস ভুল রিডাইরেকশন ক্যাশ না করে
+    const signInUrl = new URL("/sign-in", req.url)
+    const response = NextResponse.redirect(signInUrl)
+    response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+    return response
   }
 
   return NextResponse.next()
 })
 
 export const config = {
+  // আপনার matcher একদম পারফেক্ট আছে, সেটাই রাখা হলো
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
