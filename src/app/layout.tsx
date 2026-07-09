@@ -1,6 +1,8 @@
+// src/app/layout.tsx
 import type { Metadata } from 'next'
-import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
+import { ClerkProvider } from '@clerk/nextjs'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { ReduxProvider } from '@/lib/redux/Provider'
 import './globals.css'
 
 const geistSans = Geist({
@@ -26,8 +28,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ClerkProvider>
-          {children}
+        <ClerkProvider
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          afterSignInUrl="/dashboard"
+          afterSignUpUrl="/dashboard"
+        >
+          <ReduxProvider>
+            {children}
+          </ReduxProvider>
         </ClerkProvider>
       </body>
     </html>
